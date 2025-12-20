@@ -147,9 +147,9 @@ const DebuggerPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Row */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Section 1: Code Editor */}
+        <div>
           <CodeInputPanel
             code={code}
             setCode={setCode}
@@ -163,15 +163,21 @@ const DebuggerPage = () => {
             onReset={resetDebugger}
             isRunning={isRunning}
           />
+        </div>
+
+        {/* Section 2: Optional Context + Thinking Console */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <OptionalContextPanel
             userDescription={userDescription}
             setUserDescription={setUserDescription}
             terminalError={terminalError}
             setTerminalError={setTerminalError}
           />
-
-          {/* Bottom Row */}
           <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
+        </div>
+
+        {/* Section 3: Diff & Summary */}
+        <div>
           <DiffAndSummaryPanel
             originalCode={code}
             finalFix={finalFix}
