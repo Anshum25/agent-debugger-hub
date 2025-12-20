@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle, XCircle, Code, FileCode, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { calculateLineDiff } from "@/lib/diff-utils";
 
 interface InitialError {
   id: string;
@@ -131,16 +132,47 @@ const DiffAndSummaryPanel = ({
         <TabsContent value="original" className="flex-1 mt-3">
           <div className="h-full bg-secondary/30 rounded-xl p-4 overflow-auto">
             {originalCode ? (
-              <pre className="text-sm font-mono text-foreground whitespace-pre-wrap">
-                {originalCode.split("\n").map((line, idx) => (
-                  <div key={idx} className="flex">
-                    <span className="w-8 text-muted-foreground/50 text-right mr-4 select-none">
-                      {idx + 1}
-                    </span>
-                    <span>{line}</span>
-                  </div>
-                ))}
-              </pre>
+              <div className="text-sm font-mono text-foreground">
+                {finalFix ? (
+                  calculateLineDiff(originalCode, finalFix).map((diff, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-start ${
+                        diff.type === "removed"
+                          ? "bg-destructive/20"
+                          : diff.type === "added"
+                          ? "bg-transparent"
+                          : ""
+                      }`}
+                    >
+                      <span className="w-8 text-muted-foreground/50 text-right mr-2 flex-shrink-0 select-none">
+                        {diff.type === "removed" ? "-" : ""}
+                      </span>
+                      <span className="w-8 text-muted-foreground/50 text-right mr-4 flex-shrink-0 select-none">
+                        {diff.type !== "added" ? diff.lineNumber : ""}
+                      </span>
+                      <span
+                        className={`flex-1 ${
+                          diff.type === "removed"
+                            ? "text-destructive line-through"
+                            : ""
+                        }`}
+                      >
+                        {diff.content || " "}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  originalCode.split("\n").map((line, idx) => (
+                    <div key={idx} className="flex">
+                      <span className="w-8 text-muted-foreground/50 text-right mr-4 select-none">
+                        {idx + 1}
+                      </span>
+                      <span>{line}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No code submitted yet.
@@ -152,16 +184,38 @@ const DiffAndSummaryPanel = ({
         <TabsContent value="final" className="flex-1 mt-3">
           <div className="h-full bg-secondary/30 rounded-xl p-4 overflow-auto">
             {finalFix ? (
-              <pre className="text-sm font-mono text-foreground whitespace-pre-wrap">
-                {finalFix.split("\n").map((line, idx) => (
-                  <div key={idx} className="flex">
-                    <span className="w-8 text-muted-foreground/50 text-right mr-4 select-none">
-                      {idx + 1}
+              <div className="text-sm font-mono text-foreground">
+                {calculateLineDiff(originalCode, finalFix).map((diff, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start ${
+                      diff.type === "added"
+                        ? "bg-success/20"
+                        : diff.type === "removed"
+                        ? "bg-transparent"
+                        : ""
+                    }`}
+                  >
+                    <span className="w-8 text-muted-foreground/50 text-right mr-2 flex-shrink-0 select-none">
+                      {diff.type === "added" ? "+" : ""}
                     </span>
-                    <span className="text-success">{line}</span>
+                    <span className="w-8 text-muted-foreground/50 text-right mr-4 flex-shrink-0 select-none">
+                      {diff.type !== "removed" ? diff.lineNumber : ""}
+                    </span>
+                    <span
+                      className={`flex-1 ${
+                        diff.type === "added"
+                          ? "text-success"
+                          : diff.type === "removed"
+                          ? "line-through opacity-50"
+                          : ""
+                      }`}
+                    >
+                      {diff.content || " "}
+                    </span>
                   </div>
                 ))}
-              </pre>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Run the debugger to see the fixed code.

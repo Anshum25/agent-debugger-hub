@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Bug, ArrowLeft } from "lucide-react";
+import { Bug, ArrowLeft, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 import { CodeInputPanel, defaultCode } from "@/components/debugger/CodeInputPanel";
 import OptionalContextPanel from "@/components/debugger/OptionalContextPanel";
 import ThinkingConsole from "@/components/debugger/ThinkingConsole";
@@ -61,13 +62,14 @@ const phases = [
 ];
 
 const DebuggerPage = () => {
+  const { theme, setTheme } = useTheme();
   const [code, setCode] = useState(defaultCode);
   const [language, setLanguage] = useState("python");
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [mode, setMode] = useState<"fast" | "deep">("fast");
   const [userDescription, setUserDescription] = useState("");
   const [terminalError, setTerminalError] = useState("");
-  
+
   const [isRunning, setIsRunning] = useState(false);
   const [currentPhase, setCurrentPhase] = useState("");
   const [steps, setSteps] = useState<DebugStep[]>([]);
@@ -129,44 +131,63 @@ const DebuggerPage = () => {
                 <span className="font-semibold text-foreground">Multi-Agent Debugger</span>
               </div>
             </div>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Row */}
-          <CodeInputPanel
-            code={code}
-            setCode={setCode}
-            language={language}
-            setLanguage={setLanguage}
-            maxAttempts={maxAttempts}
-            setMaxAttempts={setMaxAttempts}
-            mode={mode}
-            setMode={setMode}
-            onRun={runDebugger}
-            onReset={resetDebugger}
-            isRunning={isRunning}
-          />
-          <OptionalContextPanel
-            userDescription={userDescription}
-            setUserDescription={setUserDescription}
-            terminalError={terminalError}
-            setTerminalError={setTerminalError}
-          />
+      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+          {/* Column 1: Code Editor */}
+          <div className="overflow-hidden">
+            <CodeInputPanel
+              code={code}
+              setCode={setCode}
+              language={language}
+              setLanguage={setLanguage}
+              maxAttempts={maxAttempts}
+              setMaxAttempts={setMaxAttempts}
+              mode={mode}
+              setMode={setMode}
+              onRun={runDebugger}
+              onReset={resetDebugger}
+              isRunning={isRunning}
+            />
+          </div>
 
-          {/* Bottom Row */}
-          <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
-          <DiffAndSummaryPanel
-            originalCode={code}
-            finalFix={finalFix}
-            status={status}
-            attemptsTaken={steps.length}
-            initialErrors={initialErrors}
-            validatorFeedback={validatorFeedback}
-          />
+          {/* Column 2: Optional Context + Thinking Console */}
+          <div className="grid grid-rows-2 gap-6 overflow-hidden">
+            <OptionalContextPanel
+              userDescription={userDescription}
+              setUserDescription={setUserDescription}
+              terminalError={terminalError}
+              setTerminalError={setTerminalError}
+            />
+            <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
+          </div>
+
+          {/* Column 3: Diff & Summary */}
+          <div className="overflow-hidden">
+            <DiffAndSummaryPanel
+              originalCode={code}
+              finalFix={finalFix}
+              status={status}
+              attemptsTaken={steps.length}
+              initialErrors={initialErrors}
+              validatorFeedback={validatorFeedback}
+            />
+          </div>
         </div>
       </main>
     </div>

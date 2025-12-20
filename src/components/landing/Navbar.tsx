@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bug, Menu, X } from "lucide-react";
+import { Bug, Menu, X, Moon, Sun } from "lucide-react";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const navLinks = [
     { href: "#workflow", label: "Workflow" },
@@ -40,8 +42,21 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <div className="hidden md:block">
+          {/* Right side items */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+            {/* CTA Button */}
             <Link to="/debugger">
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 Run Debugger
@@ -72,11 +87,24 @@ const Navbar = () => {
                   {link.label}
                 </a>
               ))}
-              <Link to="/debugger" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Run Debugger
-                </Button>
-              </Link>
+              <div className="flex items-center justify-between gap-2 px-2">
+                <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
+                  )}
+                </button>
+                <Link to="/debugger" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                    Run Debugger
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         )}
