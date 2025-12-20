@@ -107,7 +107,7 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  html {
+  html.dark {
     @apply dark;
   }
 }
