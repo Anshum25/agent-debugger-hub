@@ -62,13 +62,14 @@ const phases = [
 ];
 
 const DebuggerPage = () => {
+  const { theme, setTheme } = useTheme();
   const [code, setCode] = useState(defaultCode);
   const [language, setLanguage] = useState("python");
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [mode, setMode] = useState<"fast" | "deep">("fast");
   const [userDescription, setUserDescription] = useState("");
   const [terminalError, setTerminalError] = useState("");
-  
+
   const [isRunning, setIsRunning] = useState(false);
   const [currentPhase, setCurrentPhase] = useState("");
   const [steps, setSteps] = useState<DebugStep[]>([]);
