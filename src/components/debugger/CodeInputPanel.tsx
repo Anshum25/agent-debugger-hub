@@ -59,6 +59,26 @@ const CodeInputPanel = ({
   onReset,
   isRunning,
 }: CodeInputPanelProps) => {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const getMonacoLanguage = (lang: string) => {
+    const languageMap: Record<string, string> = {
+      python: "python",
+      javascript: "javascript",
+      typescript: "typescript",
+      java: "java",
+      csharp: "csharp",
+      go: "go",
+      rust: "rust",
+    };
+    return languageMap[lang] || "python";
+  };
+
   return (
     <div className="bg-card border border-border rounded-2xl p-6 h-full flex flex-col">
       {/* Header Controls */}
@@ -125,17 +145,27 @@ const CodeInputPanel = ({
       </div>
 
       {/* Code Editor */}
-      <div className="flex-1 relative">
-        <div className="absolute top-3 left-3 text-xs text-muted-foreground font-medium">
-          Input Code
-        </div>
-        <textarea
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder={defaultCode}
-          className="w-full h-full min-h-[300px] p-4 pt-8 bg-secondary/50 border border-border rounded-xl font-mono text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
-          spellCheck={false}
-        />
+      <div className="flex-1 relative overflow-hidden rounded-xl border border-border">
+        {mounted && (
+          <Editor
+            height="100%"
+            defaultLanguage={getMonacoLanguage(language)}
+            language={getMonacoLanguage(language)}
+            value={code}
+            onChange={(value) => setCode(value || "")}
+            theme={theme === "dark" ? "vs-dark" : "vs"}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: "on",
+              scrollBeyondLastLine: false,
+              wordWrap: "on",
+              formatOnPaste: true,
+              formatOnType: true,
+              automaticLayout: true,
+            }}
+          />
+        )}
       </div>
 
       {/* Action Buttons */}
