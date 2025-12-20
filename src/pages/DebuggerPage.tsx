@@ -1,68 +1,26 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Bug, ArrowLeft, Moon, Sun } from "lucide-react";
+import { Bug, ArrowLeft, Moon, Sun, Clock } from "lucide-react";
 import { useTheme } from "next-themes";
 import { CodeInputPanel, defaultCode } from "@/components/debugger/CodeInputPanel";
 import OptionalContextPanel from "@/components/debugger/OptionalContextPanel";
 import ThinkingConsole from "@/components/debugger/ThinkingConsole";
 import DiffAndSummaryPanel from "@/components/debugger/DiffAndSummaryPanel";
 import { DebugStep } from "@/components/debugger/AttemptCard";
+import HistoryDrawer from "@/components/debugger/HistoryDrawer";
+import { useSessionStore } from "@/store/sessionStore";
 
-const mockSteps: DebugStep[] = [
-  {
-    attempt_index: 1,
-    scanner_output: `Found 3 issues:
-- Line 3: NameError - 'numbrs' is not defined (typo for 'numbers')
-- Line 5: NameError - 'reslt' is not defined (typo for 'result')  
-- Line 8: TypeError - calculate_sum expects list, got string
-- Line 9: NameError - 'console' is not defined in Python`,
-    fixer_output: {
-      fixed_code: `def calculate_sum(numbers):
-    result = 0
-    for num in numbers:  # Fixed typo
-        result += num
-    return result  # Fixed typo
-
-# Fixed: passing list instead of string
-total = calculate_sum([1, 2, 3])
-print(total)  # Fixed: using Python print()`,
-      change_log: `• Fixed typo: 'numbrs' → 'numbers' on line 3
-• Fixed typo: 'reslt' → 'result' on line 5
-• Fixed type error: "1, 2, 3" → [1, 2, 3] on line 8
-• Fixed syntax: console.log → print on line 9`,
-    },
-    validator_output: {
-      status: "VALID",
-      reasons: [
-        "All variable names are now correctly spelled",
-        "Function receives correct data type (list)",
-        "Python syntax is used correctly (print instead of console.log)",
-      ],
-      suggested_feedback_for_fixer: "",
-      confidence: 0.95,
-    },
-    created_at: "Just now",
-  },
-];
-
-const mockInitialErrors = [
-  { id: "1", line: 3, category: "NameError", explanation: "'numbrs' is not defined", criticality: "high" as const },
-  { id: "2", line: 5, category: "NameError", explanation: "'reslt' is not defined", criticality: "high" as const },
-  { id: "3", line: 8, category: "TypeError", explanation: "Expected list, got string", criticality: "medium" as const },
-  { id: "4", line: 9, category: "NameError", explanation: "'console' is not defined in Python", criticality: "low" as const },
-];
-
-const phases = [
-  "Scanner Agent analyzing code...",
-  "Identifying syntax errors and bugs...",
-  "Fixer Agent proposing corrections...",
-  "Applying intelligent fixes...",
-  "Validator Agent checking results...",
-  "Verifying fix correctness...",
-];
+interface InitialError {
+  id: string;
+  line: number | null;
+  category: string;
+  explanation: string;
+  criticality: "low" | "medium" | "high";
+}
 
 const DebuggerPage = () => {
   const { theme, setTheme } = useTheme();
+  const { data: sessionData, loadingSession } = useSessionStore();
   const [code, setCode] = useState(defaultCode);
   const [language, setLanguage] = useState("python");
   const [maxAttempts, setMaxAttempts] = useState(3);
@@ -74,9 +32,28 @@ const DebuggerPage = () => {
   const [currentPhase, setCurrentPhase] = useState("");
   const [steps, setSteps] = useState<DebugStep[]>([]);
   const [status, setStatus] = useState<"Success" | "Max attempts reached" | null>(null);
-  const [initialErrors, setInitialErrors] = useState<typeof mockInitialErrors>([]);
+  const [initialErrors, setInitialErrors] = useState<InitialError[]>([]);
   const [validatorFeedback, setValidatorFeedback] = useState("");
   const [finalFix, setFinalFix] = useState("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // When a session is loaded from the History Drawer, hydrate the UI quadrants
+  useEffect(() => {
+    if (!sessionData) return;
+
+    setCode(sessionData.code);
+    setLanguage(sessionData.language);
+    setUserDescription(sessionData.userDescription ?? "");
+    setTerminalError(sessionData.terminalError ?? "");
+    setSteps(sessionData.steps as DebugStep[]);
+    setInitialErrors(sessionData.initialErrors as InitialError[]);
+    setFinalFix(sessionData.finalFix);
+    setValidatorFeedback(sessionData.validatorFeedback);
+    setStatus((sessionData.status === "Failed" ? "Max attempts reached" : sessionData.status) as
+      | "Success"
+      | "Max attempts reached"
+      | null);
+  }, [sessionData]);
 
   const runDebugger = useCallback(async () => {
     setIsRunning(true);
@@ -86,20 +63,89 @@ const DebuggerPage = () => {
     setFinalFix("");
     setValidatorFeedback("");
 
-    // Simulate animated phases
-    for (let i = 0; i < phases.length; i++) {
-      setCurrentPhase(phases[i]);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    }
+    setCurrentPhase("Connecting to agents...");
 
-    // Set mock results
-    setSteps(mockSteps);
-    setInitialErrors(mockInitialErrors);
-    setFinalFix(mockSteps[0].fixer_output.fixed_code);
-    setValidatorFeedback("All identified issues have been successfully resolved. The code now runs without errors.");
-    setStatus("Success");
-    setIsRunning(false);
-  }, []);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${protocol}://${window.location.host}/api/ws/debug`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          code,
+          language,
+          maxAttempts,
+          mode,
+          userDescription,
+          terminalError,
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (!msg || typeof msg !== "object") return;
+
+        if (msg.type === "phase") {
+          setCurrentPhase(String(msg.message ?? ""));
+          return;
+        }
+
+        if (msg.type === "initial_errors") {
+          const errs = Array.isArray(msg.initialErrors) ? (msg.initialErrors as InitialError[]) : [];
+          setInitialErrors(errs);
+          return;
+        }
+
+        if (msg.type === "attempt") {
+          const step = msg.step as DebugStep;
+          if (!step) return;
+          setSteps((prev) => [...prev, step]);
+          return;
+        }
+
+        if (msg.type === "final") {
+          const session = msg.session as {
+            status: "Success" | "Max attempts reached" | "Failed" | null;
+            finalFix: string;
+            validatorFeedback: string;
+          };
+
+          setFinalFix(session?.finalFix ?? "");
+          setValidatorFeedback(session?.validatorFeedback ?? "");
+          setStatus((session?.status === "Failed" ? "Max attempts reached" : session?.status) as
+            | "Success"
+            | "Max attempts reached"
+            | null);
+          setIsRunning(false);
+          setCurrentPhase("");
+          ws.close();
+          return;
+        }
+
+        if (msg.type === "error") {
+          setValidatorFeedback(String(msg.message ?? "Debugger failed"));
+          setIsRunning(false);
+          setCurrentPhase("");
+          ws.close();
+        }
+      } catch (e) {
+        console.error("WS message parse error", e);
+      }
+    };
+
+    ws.onerror = () => {
+      setValidatorFeedback("Failed to connect to the debugger backend.");
+      setIsRunning(false);
+      setCurrentPhase("");
+    };
+
+    ws.onclose = () => {
+      setIsRunning(false);
+      setCurrentPhase("");
+    };
+  }, [code, language, maxAttempts, mode, userDescription, terminalError]);
 
   const resetDebugger = useCallback(() => {
     setCode(defaultCode);
@@ -116,9 +162,9 @@ const DebuggerPage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-4 sm:px-8 lg:px-16 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm">Back</span>
@@ -131,63 +177,95 @@ const DebuggerPage = () => {
                 <span className="font-semibold text-foreground">Multi-Agent Debugger</span>
               </div>
             </div>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            >
-              {theme === "dark" ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsHistoryOpen((prev) => !prev)}
+                className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors hidden md:inline-flex"
+                title="Toggle history drawer"
+              >
+                <Clock className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              >
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
-          {/* Column 1: Code Editor */}
-          <div className="overflow-hidden">
-            <CodeInputPanel
-              code={code}
-              setCode={setCode}
-              language={language}
-              setLanguage={setLanguage}
-              maxAttempts={maxAttempts}
-              setMaxAttempts={setMaxAttempts}
-              mode={mode}
-              setMode={setMode}
-              onRun={runDebugger}
-              onReset={resetDebugger}
-              isRunning={isRunning}
-            />
+      <main className="w-full mx-auto px-4 sm:px-8 lg:px-16 py-6">
+        <div
+          className={`relative h-full grid grid-cols-1 gap-4 ${isHistoryOpen ? "xl:grid-cols-[minmax(0,1fr)_18rem]" : "xl:grid-cols-[minmax(0,1fr)]"
+            }`}
+        >
+          {/* Workspace grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+            {/* Column 1: Code Editor */}
+            <div className="overflow-hidden">
+              <CodeInputPanel
+                code={code}
+                setCode={setCode}
+                language={language}
+                setLanguage={setLanguage}
+                maxAttempts={maxAttempts}
+                setMaxAttempts={setMaxAttempts}
+                mode={mode}
+                setMode={setMode}
+                onRun={runDebugger}
+                onReset={resetDebugger}
+                isRunning={isRunning || loadingSession}
+              />
+            </div>
+
+            {/* Column 2: Optional Context + Thinking Console */}
+            <div className="grid gap-6 overflow-hidden grid-rows-[2fr_3fr]">
+              <OptionalContextPanel
+                userDescription={userDescription}
+                setUserDescription={setUserDescription}
+                terminalError={terminalError}
+                setTerminalError={setTerminalError}
+              />
+              <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
+            </div>
+
+            {/* Column 3: Diff & Summary */}
+            <div className="overflow-hidden">
+              <DiffAndSummaryPanel
+                originalCode={code}
+                finalFix={finalFix}
+                status={status}
+                attemptsTaken={steps.length}
+                initialErrors={initialErrors}
+                validatorFeedback={validatorFeedback}
+              />
+            </div>
           </div>
 
-          {/* Column 2: Optional Context + Thinking Console */}
-          <div className="grid grid-rows-2 gap-6 overflow-hidden">
-            <OptionalContextPanel
-              userDescription={userDescription}
-              setUserDescription={setUserDescription}
-              terminalError={terminalError}
-              setTerminalError={setTerminalError}
-            />
-            <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
-          </div>
+          {/* History Drawer */}
+          {isHistoryOpen && (
+            <div className="hidden xl:block h-[calc(100vh-180px)]">
+              <HistoryDrawer isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen} />
+            </div>
+          )}
 
-          {/* Column 3: Diff & Summary */}
-          <div className="overflow-hidden">
-            <DiffAndSummaryPanel
-              originalCode={code}
-              finalFix={finalFix}
-              status={status}
-              attemptsTaken={steps.length}
-              initialErrors={initialErrors}
-              validatorFeedback={validatorFeedback}
-            />
-          </div>
+          {/* Loading Session overlay across workspace */}
+          {loadingSession && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-slate-950/90 px-4 py-3 border border-slate-800">
+                <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <p className="text-xs text-slate-200 font-medium">Loading session...</p>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

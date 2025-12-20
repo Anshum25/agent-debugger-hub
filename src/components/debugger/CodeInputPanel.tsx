@@ -34,6 +34,7 @@ const languages = [
   { value: "csharp", label: "C#" },
   { value: "go", label: "Go" },
   { value: "rust", label: "Rust" },
+  { value: "Other", label: "Other" },
 ];
 
 const defaultCode = `def calculate_sum(numbers):
@@ -98,20 +99,7 @@ const CodeInputPanel = ({
         </Select>
 
         {/* Max Attempts Slider */}
-        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Max Attempts:
-          </span>
-          <Slider
-            value={[maxAttempts]}
-            onValueChange={(value) => setMaxAttempts(value[0])}
-            min={1}
-            max={5}
-            step={1}
-            className="flex-1"
-          />
-          <span className="text-sm font-medium text-foreground w-4">{maxAttempts}</span>
-        </div>
+
 
         {/* Mode Toggle */}
         <div className="flex rounded-lg bg-secondary p-1">
@@ -120,11 +108,10 @@ const CodeInputPanel = ({
               setMode("fast");
               setMaxAttempts(1);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              mode === "fast"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${mode === "fast"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             Fast
           </button>
@@ -133,11 +120,10 @@ const CodeInputPanel = ({
               setMode("deep");
               setMaxAttempts(5);
             }}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              mode === "deep"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${mode === "deep"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             Deep Debug
           </button>

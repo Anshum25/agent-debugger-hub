@@ -39,18 +39,6 @@ const AttemptCard = ({ step, isExpanded, onToggle }: AttemptCardProps) => {
           <span className="font-semibold text-foreground">
             Attempt #{step.attempt_index}
           </span>
-          <span
-            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-              isValid
-                ? "bg-success/10 text-success border border-success/30"
-                : "bg-destructive/10 text-destructive border border-destructive/30"
-            }`}
-          >
-            {step.validator_output.status}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Confidence: {Math.round(step.validator_output.confidence * 100)}%
-          </span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="text-xs">{step.created_at}</span>
@@ -106,15 +94,6 @@ const AttemptCard = ({ step, isExpanded, onToggle }: AttemptCardProps) => {
                 <div className="bg-secondary/30 rounded-lg p-3">
                   <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
                     {step.fixer_output.change_log}
-                  </pre>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-xs font-medium text-foreground mb-2">Fixed Code Preview</h4>
-                <div className="bg-secondary/30 rounded-lg p-3 max-h-40 overflow-auto">
-                  <pre className="text-xs font-mono text-foreground whitespace-pre-wrap">
-                    {step.fixer_output.fixed_code.slice(0, 300)}
-                    {step.fixer_output.fixed_code.length > 300 && "..."}
                   </pre>
                 </div>
               </div>

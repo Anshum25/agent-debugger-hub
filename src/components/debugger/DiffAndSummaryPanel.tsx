@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { CheckCircle, XCircle, Code, FileCode, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, XCircle, Code, FileCode, AlertCircle, Copy, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateLineDiff } from "@/lib/diff-utils";
+import { Button } from "@/components/ui/button";
 
 interface InitialError {
   id: string;
@@ -30,6 +31,36 @@ const DiffAndSummaryPanel = ({
 }: DiffAndSummaryPanelProps) => {
   const [activeTab, setActiveTab] = useState("original");
 
+  useEffect(() => {
+    if (finalFix) {
+      setActiveTab("final");
+    } else {
+      setActiveTab("original");
+    }
+  }, [finalFix]);
+
+  const handleCopyFinalCode = async () => {
+    if (!finalFix) return;
+    try {
+      await navigator.clipboard.writeText(finalFix);
+    } catch (err) {
+      console.error("Failed to copy final code", err);
+    }
+  };
+
+  const handleDownloadFinalCode = () => {
+    if (!finalFix) return;
+    const blob = new Blob([finalFix], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "final_fix.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getCriticalityStyles = (criticality: string) => {
     switch (criticality) {
       case "high":
@@ -50,11 +81,10 @@ const DiffAndSummaryPanel = ({
         {/* Status Badge */}
         {status && (
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-              status === "Success"
-                ? "bg-success/10 text-success border border-success/30"
-                : "bg-warning/10 text-warning border border-warning/30"
-            }`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${status === "Success"
+              ? "bg-success/10 text-success border border-success/30"
+              : "bg-warning/10 text-warning border border-warning/30"
+              }`}
           >
             {status === "Success" ? (
               <CheckCircle className="w-4 h-4" />
@@ -137,13 +167,12 @@ const DiffAndSummaryPanel = ({
                   calculateLineDiff(originalCode, finalFix).map((diff, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start ${
-                        diff.type === "removed"
-                          ? "bg-destructive/20"
-                          : diff.type === "added"
+                      className={`flex items-start ${diff.type === "removed"
+                        ? "bg-destructive/20"
+                        : diff.type === "added"
                           ? "bg-transparent"
                           : ""
-                      }`}
+                        }`}
                     >
                       <span className="w-8 text-muted-foreground/50 text-right mr-2 flex-shrink-0 select-none">
                         {diff.type === "removed" ? "-" : ""}
@@ -152,11 +181,10 @@ const DiffAndSummaryPanel = ({
                         {diff.type !== "added" ? diff.lineNumber : ""}
                       </span>
                       <span
-                        className={`flex-1 ${
-                          diff.type === "removed"
-                            ? "text-destructive line-through"
-                            : ""
-                        }`}
+                        className={`flex-1 ${diff.type === "removed"
+                          ? "text-destructive line-through"
+                          : ""
+                          }`}
                       >
                         {diff.content || " "}
                       </span>
@@ -182,40 +210,60 @@ const DiffAndSummaryPanel = ({
         </TabsContent>
 
         <TabsContent value="final" className="flex-1 mt-3">
-          <div className="h-full bg-secondary/30 rounded-xl p-4 overflow-auto">
+          <div className="h-full bg-secondary/30 rounded-xl p-4 overflow-auto flex flex-col">
             {finalFix ? (
-              <div className="text-sm font-mono text-foreground">
-                {calculateLineDiff(originalCode, finalFix).map((diff, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-start ${
-                      diff.type === "added"
-                        ? "bg-success/20"
-                        : diff.type === "removed"
-                        ? "bg-transparent"
-                        : ""
-                    }`}
+              <>
+                <div className="flex justify-end gap-2 mb-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-border"
+                    onClick={handleCopyFinalCode}
+                    title="Copy final code"
                   >
-                    <span className="w-8 text-muted-foreground/50 text-right mr-2 flex-shrink-0 select-none">
-                      {diff.type === "added" ? "+" : ""}
-                    </span>
-                    <span className="w-8 text-muted-foreground/50 text-right mr-4 flex-shrink-0 select-none">
-                      {diff.type !== "removed" ? diff.lineNumber : ""}
-                    </span>
-                    <span
-                      className={`flex-1 ${
-                        diff.type === "added"
-                          ? "text-success"
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-border"
+                    onClick={handleDownloadFinalCode}
+                    title="Download final code (.txt)"
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="text-sm font-mono text-foreground flex-1">
+                  {calculateLineDiff(originalCode, finalFix).map((diff, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-start ${diff.type === "added"
+                          ? "bg-success/20"
                           : diff.type === "removed"
-                          ? "line-through opacity-50"
-                          : ""
-                      }`}
+                            ? "bg-transparent"
+                            : ""
+                        }`}
                     >
-                      {diff.content || " "}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span className="w-8 text-muted-foreground/50 text-right mr-2 flex-shrink-0 select-none">
+                        {diff.type === "added" ? "+" : ""}
+                      </span>
+                      <span className="w-8 text-muted-foreground/50 text-right mr-4 flex-shrink-0 select-none">
+                        {diff.type !== "removed" ? diff.lineNumber : ""}
+                      </span>
+                      <span
+                        className={`flex-1 ${diff.type === "added"
+                            ? "text-success"
+                            : diff.type === "removed"
+                              ? "line-through opacity-50"
+                              : ""
+                          }`}
+                      >
+                        {diff.content || " "}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Run the debugger to see the fixed code.
