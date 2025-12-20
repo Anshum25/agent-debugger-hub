@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle, XCircle, Code, FileCode, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { calculateLineDiff } from "@/lib/diff-utils";
 
 interface InitialError {
   id: string;
