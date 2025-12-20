@@ -106,10 +106,6 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
-
-  html.dark {
-    @apply dark;
-  }
 }
 
 @layer utilities {
