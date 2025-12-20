@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Bug, ArrowLeft } from "lucide-react";
+import { Bug, ArrowLeft, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 import { CodeInputPanel, defaultCode } from "@/components/debugger/CodeInputPanel";
 import OptionalContextPanel from "@/components/debugger/OptionalContextPanel";
 import ThinkingConsole from "@/components/debugger/ThinkingConsole";
