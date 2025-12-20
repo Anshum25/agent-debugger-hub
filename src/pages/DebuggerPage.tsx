@@ -147,45 +147,47 @@ const DebuggerPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Section 1: Code Editor */}
-        <div>
-          <CodeInputPanel
-            code={code}
-            setCode={setCode}
-            language={language}
-            setLanguage={setLanguage}
-            maxAttempts={maxAttempts}
-            setMaxAttempts={setMaxAttempts}
-            mode={mode}
-            setMode={setMode}
-            onRun={runDebugger}
-            onReset={resetDebugger}
-            isRunning={isRunning}
-          />
-        </div>
+      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+          {/* Column 1: Code Editor */}
+          <div className="overflow-hidden">
+            <CodeInputPanel
+              code={code}
+              setCode={setCode}
+              language={language}
+              setLanguage={setLanguage}
+              maxAttempts={maxAttempts}
+              setMaxAttempts={setMaxAttempts}
+              mode={mode}
+              setMode={setMode}
+              onRun={runDebugger}
+              onReset={resetDebugger}
+              isRunning={isRunning}
+            />
+          </div>
 
-        {/* Section 2: Optional Context + Thinking Console */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <OptionalContextPanel
-            userDescription={userDescription}
-            setUserDescription={setUserDescription}
-            terminalError={terminalError}
-            setTerminalError={setTerminalError}
-          />
-          <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
-        </div>
+          {/* Column 2: Optional Context + Thinking Console */}
+          <div className="grid grid-rows-2 gap-6 overflow-hidden">
+            <OptionalContextPanel
+              userDescription={userDescription}
+              setUserDescription={setUserDescription}
+              terminalError={terminalError}
+              setTerminalError={setTerminalError}
+            />
+            <ThinkingConsole steps={steps} isLoading={isRunning} currentPhase={currentPhase} />
+          </div>
 
-        {/* Section 3: Diff & Summary */}
-        <div>
-          <DiffAndSummaryPanel
-            originalCode={code}
-            finalFix={finalFix}
-            status={status}
-            attemptsTaken={steps.length}
-            initialErrors={initialErrors}
-            validatorFeedback={validatorFeedback}
-          />
+          {/* Column 3: Diff & Summary */}
+          <div className="overflow-hidden">
+            <DiffAndSummaryPanel
+              originalCode={code}
+              finalFix={finalFix}
+              status={status}
+              attemptsTaken={steps.length}
+              initialErrors={initialErrors}
+              validatorFeedback={validatorFeedback}
+            />
+          </div>
         </div>
       </main>
     </div>
